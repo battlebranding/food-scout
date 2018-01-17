@@ -193,6 +193,10 @@ class Food_Scout_API {
 
 		$search_query = strtolower( $request->get_param( 'q' ) );
 
+		if ( empty( $search_query ) ) {
+			wp_send_json_success( array() );
+		}
+
 		$terms = get_terms( array(
 			'hide_empty' => false,
 			'taxonomy'   => 'taste',
