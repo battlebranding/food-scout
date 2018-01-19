@@ -172,9 +172,18 @@ class Food_Scout_API {
 	 */
 	public function get_food_via_api( $request ) {
 
+		$taste = $request->get_param( 'taste' );
+
 		$food_query = array(
 			'post_type'   => 'food',
 			'post_status' => 'publish',
+			'tax_query'   => array(
+				array(
+					'taxonomy' => 'taste',
+					'field'    => 'slug',
+					'terms'    => $taste,
+				),
+			),
 		);
 
 		$food = get_posts( $food_query );
