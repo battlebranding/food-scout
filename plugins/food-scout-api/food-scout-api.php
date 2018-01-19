@@ -263,12 +263,21 @@ class Food_Scout_API {
 
 		foreach ( $results as $key => $result ) {
 
+			// Get the connected restaurant.
+			$connected = new WP_Query( array(
+				'connected_type'  => 'food_to_restaurant',
+				'connected_items' => $result,
+				'nopaging'        => true,
+				'posts_per_page'  => 1,
+			) );
+
 			$object = array(
 				'id'          => $result->ID,
 				'name'        => $result->post_title,
 				'slug'        => $result->post_name,
 				'description' => $result->post_content,
 				'cost'        => '0.00',
+				'restaurant'  => $connected->have_posts() ? $this->parse_restaurants( $connected->posts )[0] : null,
 				'taste'       => $this->parse_taste( wp_get_object_terms( $result->ID, 'taste' ) ),
 			);
 
