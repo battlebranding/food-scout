@@ -346,6 +346,8 @@ class Food_Scout_API {
 				'address'     => array(
 					'latitude'  => get_post_meta( $result->ID, 'latitude', true ),
 					'longitude' => get_post_meta( $result->ID, 'longitude', true ),
+					'city'      => get_post_meta( $result->ID, 'city', true ),
+					'state'     => get_post_meta( $result->ID, 'state', true ),
 				),
 			);
 
