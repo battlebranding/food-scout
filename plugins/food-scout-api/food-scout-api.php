@@ -289,6 +289,10 @@ class Food_Scout_API {
 
 		$food = $connected->have_posts() ? $connected->posts : array();
 
+		foreach ( $food as $key => $item ) {
+			$food[ $key ]->distance = round( $results[ $key ]->distance );
+		}
+
 		wp_send_json_success( $this->parse_food( $food ) );
 	}
 
@@ -381,7 +385,8 @@ class Food_Scout_API {
 				'name'        => $result->post_title,
 				'slug'        => $result->post_name,
 				'description' => $result->post_content,
-				'cost'        => '0.00',
+				'cost'        => get_post_meta( $result->ID, 'cost', true ),
+				'distance'    => $result->distance,
 				'restaurant'  => $connected->have_posts() ? $this->parse_restaurants( $connected->posts )[0] : null,
 				'taste'       => $this->parse_taste( wp_get_object_terms( $result->ID, 'taste' ) ),
 			);
