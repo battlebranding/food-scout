@@ -47,6 +47,7 @@ class Food_Scout_API {
 		add_action( 'init', [ $this, 'register_restaurant_cpt' ], 10 );
 		add_action( 'init', [ $this, 'register_food_cpt' ], 10 );
 		add_action( 'init', [ $this, 'register_taste_taxonomy' ], 10 );
+		add_action( 'init', [ $this, 'register_location_taxonomy' ], 10 );
 
 		// Actions.
 		add_action( 'save_post', [ $this, 'set_restaurant_geolocation' ], 50, 3 );
@@ -106,6 +107,23 @@ class Food_Scout_API {
 			array(
 				'label'        => __( 'Taste' ),
 				'hierarchical' => false,
+			)
+		);
+	}
+
+	/**
+	 * Register the 'Location' custom taxonomy.
+	 *
+	 * @since 0.1.0
+	 */
+	public function register_location_taxonomy() {
+
+		register_taxonomy(
+			'location',
+			'restaurant',
+			array(
+				'label'        => __( 'Location' ),
+				'hierarchical' => true,
 			)
 		);
 	}
@@ -199,6 +217,11 @@ class Food_Scout_API {
 		register_rest_route( 'food-scout/v1', '/taste', array(
 			'methods' => 'GET',
 			'callback' => [ $this, 'get_taste_via_api' ],
+		) );
+
+		register_rest_route( 'food-scout/v1', '/locations', array(
+			'methods' => 'GET',
+			'callback' => [ $this, 'get_locations_via_api' ],
 		) );
 	}
 
@@ -321,6 +344,24 @@ class Food_Scout_API {
 	}
 
 	/**
+	 * GET the 'Location' taxonomy.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param WP_REST_Request $request The WP Rest Request object.
+	 */
+	public function get_locations_via_api( $request ) {
+
+		$terms = get_terms( array(
+			'hide_empty' => false,
+			'taxonomy'   => 'location',
+		) );
+
+		wp_send_json_success( $this->parse_locations( $terms ) );
+
+	}
+
+	/**
 	 * Parses the results from an API request and converts to preferred indices for restaurants.
 	 *
 	 * @since 0.1.0
@@ -423,6 +464,37 @@ class Food_Scout_API {
 				'count'       => $result->count,
 				'description' => $result->description,
 				'type'        => '',
+			);
+
+			$objects[] = $object;
+		}
+
+		return $objects;
+	}
+
+	/**
+	 * Parses the results from an API request and converts to preferred indices.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array $results The results from a query to parse.
+	 */
+	public function parse_locations( $results = array() ) {
+
+		if ( empty( $results ) ) {
+			return $results;
+		}
+
+		$objects = array();
+
+		foreach ( $results as $key => $result ) {
+
+			$object = array(
+				'id'          => $result->term_id,
+				'name'        => $result->name,
+				'slug'        => $result->slug,
+				'count'       => $result->count,
+				'description' => $result->description,
 			);
 
 			$objects[] = $object;
