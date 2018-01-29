@@ -46,14 +46,17 @@ class Food_Scout_API {
 		// Post Types.
 		add_action( 'init', [ $this, 'register_restaurant_cpt' ], 10 );
 		add_action( 'init', [ $this, 'register_food_cpt' ], 10 );
+		add_action( 'init', [ $this, 'register_special_cpt' ], 10 );
 		add_action( 'init', [ $this, 'register_taste_taxonomy' ], 10 );
 		add_action( 'init', [ $this, 'register_location_taxonomy' ], 10 );
+		add_action( 'init', [ $this, 'register_meal_time_taxonomy' ], 10 );
 
 		// Actions.
 		add_action( 'save_post', [ $this, 'set_restaurant_geolocation' ], 50, 3 );
 
 		// Relationships.
 		add_action( 'p2p_init', [ $this, 'register_food_p2p_connection' ] );
+		add_action( 'p2p_init', [ $this, 'register_special_p2p_connection' ] );
 
 		// API.
 		add_action( 'rest_api_init', [ $this, 'register_api_endpoints' ] );
@@ -95,6 +98,25 @@ class Food_Scout_API {
 	}
 
 	/**
+	 * Register the 'Specials' CPT.
+	 *
+	 * @since 0.1.0
+	 */
+	public function register_special_cpt() {
+
+		$args = array(
+			'public'    => true,
+			'label'     => 'Special',
+			'menu_icon' => 'dashicons-tag',
+			'rewrite'   => array(
+				'slug' => 'specials',
+			),
+		);
+
+		register_post_type( 'special', $args );
+	}
+
+	/**
 	 * Register the 'Taste' custom taxonomy.
 	 *
 	 * @since 0.1.0
@@ -129,6 +151,23 @@ class Food_Scout_API {
 	}
 
 	/**
+	 * Register the 'Meal Time' custom taxonomy.
+	 *
+	 * @since 0.1.0
+	 */
+	public function register_meal_time_taxonomy() {
+
+		register_taxonomy(
+			'meal_time',
+			array( 'special', 'food' ),
+			array(
+				'label'        => __( 'Meal Time' ),
+				'hierarchical' => true,
+			)
+		);
+	}
+
+	/**
 	 * Creates a Post 2 Post connection for food to restaurants.
 	 *
 	 * @since 0.1.0
@@ -139,6 +178,20 @@ class Food_Scout_API {
 			'name' => 'food_to_restaurant',
 			'from' => 'food',
 			'to'   => 'restaurant',
+		) );
+	}
+
+	/**
+	 * Creates a Post 2 Post connection for food to restaurants.
+	 *
+	 * @since 0.1.0
+	 */
+	public function register_special_p2p_connection() {
+
+		p2p_register_connection_type( array(
+			'name' => 'food_to_special',
+			'from' => 'food',
+			'to'   => 'special',
 		) );
 	}
 
@@ -222,6 +275,11 @@ class Food_Scout_API {
 		register_rest_route( 'food-scout/v1', '/locations', array(
 			'methods' => 'GET',
 			'callback' => [ $this, 'get_locations_via_api' ],
+		) );
+
+		register_rest_route( 'food-scout/v1', '/specials', array(
+			'methods' => 'GET',
+			'callback' => [ $this, 'get_specials_via_api' ],
 		) );
 	}
 
@@ -362,6 +420,36 @@ class Food_Scout_API {
 	}
 
 	/**
+	 * GET the 'Location' taxonomy.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param WP_REST_Request $request The WP Rest Request object.
+	 */
+	public function get_specials_via_api( $request ) {
+
+		$meal_time = 'lunch';
+
+		// Get all of the specials for the supplied meal time.
+		$specials = new WP_Query( array(
+			'post_type'       => 'special',
+			'post_status'     => 'publish',
+			'tax_query'       => array(
+				array(
+					'taxonomy' => 'meal_time',
+					'field'    => 'slug',
+					'terms'    => $meal_time,
+				),
+			),
+		) );
+
+		$specials = $specials->have_posts() ? $specials->posts : array();
+
+		wp_send_json_success( $this->parse_specials( $specials ) );
+
+	}
+
+	/**
 	 * Parses the results from an API request and converts to preferred indices for restaurants.
 	 *
 	 * @since 0.1.0
@@ -495,6 +583,43 @@ class Food_Scout_API {
 				'slug'        => $result->slug,
 				'count'       => $result->count,
 				'description' => $result->description,
+			);
+
+			$objects[] = $object;
+		}
+
+		return $objects;
+	}
+
+	/**
+	 * Parses the results from an API request and converts to preferred indices for specials.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array $results The results from a query to parse.
+	 */
+	public function parse_specials( $results = array() ) {
+
+		if ( empty( $results ) ) {
+			return $results;
+		}
+
+		$objects = array();
+
+		foreach ( $results as $key => $result ) {
+
+			// Get the connected restaurant.
+			$connected = new WP_Query( array(
+				'connected_type'  => 'food_to_special',
+				'connected_items' => $result,
+				'nopaging'        => true,
+			) );
+
+			$object = array(
+				'id'    => $result->ID,
+				'name'  => $result->post_title,
+				'slug'  => $result->post_name,
+				'food'  => $connected->have_posts() ? $this->parse_food( $connected->posts )[0] : null,
 			);
 
 			$objects[] = $object;
