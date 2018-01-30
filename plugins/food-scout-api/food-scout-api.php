@@ -53,6 +53,7 @@ class Food_Scout_API {
 
 		// Actions.
 		add_action( 'save_post', [ $this, 'set_restaurant_geolocation' ], 50, 3 );
+		add_action( 'edit_term', [ $this, 'set_location_geolocation' ], 10, 3 );
 
 		// Relationships.
 		add_action( 'p2p_init', [ $this, 'register_food_p2p_connection' ] );
@@ -196,7 +197,7 @@ class Food_Scout_API {
 	}
 
 	/**
-	 * Get the restauratn geolocation from Google Maps API.
+	 * Get the restaurant geolocation from Google Maps API.
 	 *
 	 * If this doesn't work, the alternative is https://geocod.io/.
 	 *
@@ -229,6 +230,51 @@ class Food_Scout_API {
 
 		update_post_meta( $post_id, 'latitude', $latitude );
 		update_post_meta( $post_id, 'longitude', $longitude );
+	}
+
+	/**
+	 * Get the 'location' geolocation from Google Maps API.
+	 *
+	 * If this doesn't work, the alternative is https://geocod.io/.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param integer $term_id   The term ID.
+	 * @param integer $tt_id     The taxonomy ID.
+	 * @param string  $taxonomy  The taxonomy.
+	 */
+	public function set_location_geolocation( $term_id, $tt_id, $taxonomy ) {
+
+		if ( 'location' !== $taxonomy ) {
+			return;
+		}
+
+		$term = get_term( $term_id, $taxonomy );
+
+		if ( ! $term ) {
+			return;
+		}
+
+		$geolocation_url = "http://maps.googleapis.com/maps/api/geocode/json?address={$term->name}";
+
+		$response = wp_remote_get( $geolocation_url, array(
+			'timeout' => 30,
+		) );
+
+		if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
+			return false;
+		}
+
+		$data = json_decode( wp_remote_retrieve_body( $response ) );
+
+		// Capture the geolocation.
+		$geolocation = isset( $data->results[0]->geometry->location ) ? $data->results[0]->geometry->location : null;
+
+		$latitude  = $geolocation->lat;
+		$longitude = $geolocation->lng;
+
+		update_term_meta( $term_id, 'latitude', $latitude );
+		update_term_meta( $term_id, 'longitude', $latitude );
 	}
 
 	/**
@@ -581,8 +627,8 @@ class Food_Scout_API {
 				'id'          => $result->term_id,
 				'name'        => $result->name,
 				'slug'        => $result->slug,
-				'count'       => $result->count,
-				'description' => $result->description,
+				'latitude'    => get_term_meta( $result->term_id, 'latitude', true ),
+				'longitude'   => get_term_meta( $result->term_id, 'longitude', true ),
 			);
 
 			$objects[] = $object;
