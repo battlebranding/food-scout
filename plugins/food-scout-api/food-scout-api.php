@@ -274,7 +274,7 @@ class Food_Scout_API {
 		$longitude = $geolocation->lng;
 
 		update_term_meta( $term_id, 'latitude', $latitude );
-		update_term_meta( $term_id, 'longitude', $latitude );
+		update_term_meta( $term_id, 'longitude', $longitude );
 	}
 
 	/**
