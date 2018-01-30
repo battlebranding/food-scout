@@ -255,7 +255,7 @@ class Food_Scout_API {
 			return;
 		}
 
-		$geolocation_url = "http://maps.googleapis.com/maps/api/geocode/json?address={$term->name}";
+		$geolocation_url = "http://maps.googleapis.com/maps/api/geocode/json?address={$term->name}&api_key=AIzaSyCHBysf5IJhl_kjZUloDE6a-c7RKdliYMY";
 
 		$response = wp_remote_get( $geolocation_url, array(
 			'timeout' => 30,
